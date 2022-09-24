@@ -49,7 +49,7 @@ func main() {
 	// routes.Router(ch(router))
 	srv := &http.Server{
 		Handler: router,
-		Addr:    port,
+		Addr:    "8000",
 		// Good practice: enforce timeouts for servers you create!
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  55 * time.Second,
