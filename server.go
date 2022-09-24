@@ -44,7 +44,7 @@ func main() {
 		c.JSON(200, gin.H{"success": "Access granted for api-2"})
 	})
 
-	router.Run(":" + port)
+	router.Run(":8000")
 
 	// routes.Router(ch(router))
 	srv := &http.Server{
