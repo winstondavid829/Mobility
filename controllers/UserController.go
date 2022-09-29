@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"entertainment/auth"
 	helper "entertainment/helpers"
 	"entertainment/models"
 	"fmt"
@@ -24,13 +25,14 @@ import (
 )
 
 var userCollection *mongo.Collection = configs.GetCollection(configs.DB, "Entertainment", "user")
+var userfriendsCollection *mongo.Collection = configs.GetCollection(configs.DB, "Entertainment", "userfriends")
 var validate = validator.New()
 
 //HashPassword is used to encrypt the password before it is stored in the DB
 func HashPassword(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err)
 	}
 
 	return string(bytes)
@@ -58,22 +60,28 @@ func SignUp() gin.HandlerFunc {
 
 		defer cancel()
 
+		// if auth.ValidateUserTokenInHeader(c.Request) == false {
+		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+		// 	return
+
+		// }
+
 		if err := c.BindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
 			return
 		}
 
 		validationErr := validate.Struct(user)
 		if validationErr != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": validationErr.Error()})
 			return
 		}
 
 		count, err := userCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 		defer cancel()
 		if err != nil {
-			log.Panic(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the email"})
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "error occured while looking for email"})
 			return
 		}
 
@@ -83,18 +91,17 @@ func SignUp() gin.HandlerFunc {
 		count, err = userCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
 		defer cancel()
 		if err != nil {
-			log.Panic(err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while checking for the phone number"})
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "error occured while looking for email"})
 			return
 		}
 
 		if count > 0 {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "this email or phone number already exists"})
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "User already exists"})
 			return
 		}
 
 		user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
 		token, refreshToken, _ := helper.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, user.User_id)
@@ -104,12 +111,12 @@ func SignUp() gin.HandlerFunc {
 		resultInsertionNumber, insertErr := userCollection.InsertOne(ctx, user)
 		if insertErr != nil {
 			msg := fmt.Sprintf("User item was not created")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
 			return
 		}
 		defer cancel()
 
-		c.JSON(http.StatusOK, resultInsertionNumber)
+		c.JSON(http.StatusOK, gin.H{"Status": true, "Result": resultInsertionNumber})
 
 	}
 }
@@ -123,22 +130,28 @@ func Login() gin.HandlerFunc {
 
 		defer cancel()
 
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
+
+		}
+
 		if err := c.BindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
 			return
 		}
 
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		defer cancel()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or passowrd is incorrect"})
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "incorrect username or password"})
 			return
 		}
 
 		passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
 		defer cancel()
 		if passwordIsValid != true {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
 			return
 		}
 
@@ -146,7 +159,7 @@ func Login() gin.HandlerFunc {
 
 		helper.UpdateAllTokens(token, refreshToken, foundUser.User_id)
 
-		c.JSON(http.StatusOK, foundUser)
+		c.JSON(http.StatusOK, gin.H{"Status": true, "Result": foundUser})
 
 	}
 }
@@ -172,5 +185,248 @@ func SendUserOTP(email *UserSendEmail) {
 		fmt.Println(response.StatusCode)
 		fmt.Println(response.Body)
 		fmt.Println(response.Headers)
+	}
+}
+
+//CreateUserprofile is the api used to tget a single user
+func AddUserDetails() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var user models.UserUpdateRequest
+
+		defer cancel()
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
+
+		}
+
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
+			return
+		}
+
+		validationErr := validate.Struct(user)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": validationErr.Error()})
+			return
+		}
+
+		count, err := userCollection.CountDocuments(ctx, bson.M{"user_id": user.User_id})
+		defer cancel()
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "Error occured while looking for user"})
+			return
+		}
+
+		if count > 0 {
+			// c.JSON(http.StatusInternalServerError, gin.H{"error": "this email or phone number already exists"})
+			// return
+			filter := bson.M{"user_id": user.User_id}
+
+			// updateID := req.ID.Hex()
+			update := bson.M{
+				"$set": bson.M{
+					"first_name":  user.First_name,
+					"last_name":   user.Last_name,
+					"email":       user.Email,
+					"phone":       user.Phone,
+					"gender":      user.Gender,
+					"bio":         user.Bio,
+					"accountType": user.AccountType,
+					"website":     user.Website,
+					"birthday":    user.Birthday,
+				},
+			}
+			user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+			resultInsertionNumber, insertErr := userCollection.UpdateOne(ctx, filter, update)
+			if insertErr != nil {
+				msg := fmt.Sprintf("User item was not created")
+				c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"Status": true, "Result": resultInsertionNumber})
+
+		}
+
+	}
+}
+
+func AddFriendsToUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var user models.UserFriends
+
+		defer cancel()
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
+
+		}
+
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
+			return
+		}
+
+		validationErr := validate.Struct(user)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": validationErr.Error()})
+			return
+		}
+
+		countUser, err := userCollection.CountDocuments(ctx, bson.M{"user_id": user.FriendsData.User_id, "email": user.FriendsData.Email})
+
+		if err != nil {
+			log.Panic(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "Error occured while looking for user exists"})
+			return
+		}
+
+		count, err := userfriendsCollection.CountDocuments(ctx, bson.M{"user_id": user.User_id, "friend_data.$.user_id": user.FriendsData.User_id})
+
+		fmt.Println(count, countUser)
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "error occured while looking for user already a friend"})
+			return
+		}
+
+		if countUser > 0 && count == 0 {
+			user.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+			user.ID = primitive.NewObjectID()
+			user.IsRemoved = false
+
+			resultInsertionNumber, insertErr := userfriendsCollection.InsertOne(ctx, user)
+			if insertErr != nil {
+				msg := fmt.Sprintf("user cannot be added as friend")
+				c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
+				return
+			}
+			defer cancel()
+
+			c.JSON(http.StatusOK, gin.H{"Status": true, "Result": resultInsertionNumber})
+		} else {
+			msg := fmt.Sprintf("No user identified")
+			c.JSON(http.StatusNotFound, gin.H{"Status": false, "Result": msg})
+		}
+
+	}
+}
+
+//CreateUserprofile is the api used to tget a single user
+func GetUserFriends() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var user models.UserGetRequest
+
+		var friends []models.UserFriends
+
+		defer cancel()
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
+
+		}
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
+			return
+		}
+
+		validationErr := validate.Struct(user)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": validationErr.Error()})
+			return
+		}
+
+		count, err := userCollection.CountDocuments(ctx, bson.M{"user_id": user.User_id, "email": user.Email})
+		defer cancel()
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "error occured while checking for email"})
+			return
+		}
+
+		fmt.Println(count, user.User_id)
+
+		if count > 0 {
+			////////////////////////////////////////////////////////////// Sales Staging Pipelines //////////////////////////////////////////////////
+			matchStageUserProfiles := bson.D{{"$match", bson.D{{"userid", user.User_id}, {"Isremoved", false}}}}
+
+			result, getErr := userfriendsCollection.Aggregate(ctx, mongo.Pipeline{matchStageUserProfiles})
+			if getErr != nil {
+				msg := fmt.Sprintf("User profile was not obtained")
+				c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
+				return
+			}
+			if err = result.All(ctx, &friends); err != nil {
+				msg := fmt.Sprintf("User profile was not obtained")
+				c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"Status": true, "Result": friends})
+		} else {
+			msg := fmt.Sprintf("Cannot retrieve friends list")
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
+			return
+		}
+
+	}
+}
+
+//CreateUserprofile is the api used to tget a single user
+func GetUserDetails() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var user models.UserGetRequest
+		var userInfo []models.UserUpdateRequest
+
+		defer cancel()
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
+
+		}
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
+			return
+		}
+
+		validationErr := validate.Struct(user)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": validationErr.Error()})
+			return
+		}
+
+		count, err := userCollection.CountDocuments(ctx, bson.M{"user_id": user.User_id, "email": user.Email})
+		defer cancel()
+		if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": "error occured while checking for user existance"})
+			return
+		}
+
+		fmt.Println(count)
+
+		if count > 0 {
+			////////////////////////////////////////////////////////////// Sales Staging Pipelines //////////////////////////////////////////////////
+			matchStageUserProfiles := bson.D{{"$match", bson.D{{"user_id", user.User_id}, {"email", user.Email}}}}
+
+			result, getErr := userCollection.Aggregate(ctx, mongo.Pipeline{matchStageUserProfiles})
+			if getErr = result.All(ctx, &userInfo); getErr != nil {
+				msg := fmt.Sprintf("User profile was not obtained", getErr.Error())
+				c.JSON(http.StatusInternalServerError, gin.H{"Status": false, "Result": msg})
+				return
+			}
+
+			defer cancel()
+
+			c.JSON(http.StatusOK, gin.H{"Status": true, "Result": userInfo})
+		}
+
 	}
 }

@@ -8,16 +8,43 @@ import (
 
 //User is the model that governs all notes objects retrived or inserted into the DB
 type User struct {
-	ID            primitive.ObjectID `bson:"_id"`
-	First_name    *string            `json:"first_name" validate:"required,min=2,max=100"`
-	Last_name     *string            `json:"last_name" validate:"required,min=2,max=100"`
-	Password      *string            `json:"Password" validate:"required,min=6"`
-	Email         *string            `json:"email" validate:"email,required"`
-	Phone         *string            `json:"phone" validate:"required"`
-	Gender        string             `json:"gender" validate:"required"`
-	Token         *string            `json:"token"`
-	Refresh_token *string            `json:"refresh_token"`
-	Created_at    time.Time          `json:"created_at"`
-	Updated_at    time.Time          `json:"updated_at"`
-	User_id       string             `json:"user_id"`
+	ID             primitive.ObjectID `bson:"_id"`
+	First_name     *string            `json:"first_name" validate:"required,min=2,max=100"`
+	Last_name      *string            `json:"last_name" validate:"required,min=2,max=100"`
+	Password       *string            `json:"Password" validate:"required,min=6"`
+	Email          *string            `json:"email" validate:"email,required"`
+	Phone          *string            `json:"phone" validate:"required"`
+	Token          *string            `json:"token"`
+	Refresh_token  *string            `json:"refresh_token"`
+	Created_at     time.Time          `json:"created_at"`
+	Updated_at     time.Time          `json:"updated_at"`
+	User_id        string             `json:"user_id"`
+	Gender         string             `json:"gender" `
+	Bio            string             `json:"bio"`
+	AccountType    string             `json:"accountType" default:"public"`
+	Website        string             `json:"website"`
+	Birthday       string             `json:"birthday"`
+	ProfilePicture string             `json:"profile_picture" validate:"required"`
+}
+
+//User is the model that governs all notes objects retrived or inserted into the DB
+type UserUpdateRequest struct {
+	ID             primitive.ObjectID `bson:"_id"`
+	First_name     *string            `json:"first_name" validate:"required"`
+	Last_name      *string            `json:"last_name" validate:"required"`
+	Email          *string            `json:"email" validate:"email,required"`
+	Phone          *string            `json:"phone" validate:"required"`
+	User_id        string             `json:"user_id"`
+	Gender         string             `json:"gender"`
+	Bio            string             `json:"bio"`
+	AccountType    string             `json:"accountType" default:"public"`
+	Website        string             `json:"website"`
+	Birthday       string             `json:"birthday"`
+	ProfilePicture string             `json:"profile_picture"`
+	Updated_at     time.Time          `json:"updated_at"`
+}
+
+type UserGetRequest struct {
+	Email   *string `json:"email" validate:"email,required"`
+	User_id string  `json:"user_id"`
 }
