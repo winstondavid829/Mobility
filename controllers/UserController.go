@@ -60,11 +60,11 @@ func SignUp() gin.HandlerFunc {
 
 		defer cancel()
 
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
@@ -124,17 +124,16 @@ func SignUp() gin.HandlerFunc {
 //Login is the api used to tget a single user
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		var user models.User
-		var foundUser models.User
-
-		defer cancel()
-
 		if auth.ValidateUserTokenInHeader(c.Request) == false {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
 			return
 
 		}
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var user models.User
+		var foundUser models.User
+
+		defer cancel()
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})

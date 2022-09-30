@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"entertainment/auth"
 	"entertainment/models"
 	"fmt"
 	"log"
@@ -20,11 +21,11 @@ func AuthenticateSpotify() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
 		defer cancel()
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 		// ctx := context.Background()
 		config := &clientcredentials.Config{
 			ClientID:     os.Getenv("SPOTIFY_CLIENTID"),

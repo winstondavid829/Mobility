@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"context"
+	"entertainment/auth"
 	helper "entertainment/helpers"
 	"entertainment/models"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -19,11 +21,11 @@ func CreatePost() gin.HandlerFunc {
 		var foundUser models.User
 
 		defer cancel()
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

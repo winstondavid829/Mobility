@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"entertainment/auth"
 	"entertainment/configs"
 	"entertainment/models"
 	"fmt"
@@ -25,11 +26,11 @@ func CreateUserPost() gin.HandlerFunc {
 		var post models.UserPost
 
 		defer cancel()
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 
 		if err := c.BindJSON(&post); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
@@ -83,11 +84,11 @@ func GetAllUserPosts() gin.HandlerFunc {
 		var userPosts []models.UserPostResponse
 
 		defer cancel()
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
 			return
@@ -143,11 +144,11 @@ func ViewFriendsPost() gin.HandlerFunc {
 		// var userPosts []models.UserFriendPostResponse
 		var userPosts []bson.M
 		defer cancel()
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})
 			return
@@ -246,11 +247,11 @@ func LikePost() gin.HandlerFunc {
 		// var userPosts []bson.M
 		defer cancel()
 
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})

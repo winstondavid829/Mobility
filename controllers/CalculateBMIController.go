@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"entertainment/auth"
 	"entertainment/configs"
 	"entertainment/models"
 	"fmt"
@@ -25,11 +26,11 @@ func BMI_Calculation() gin.HandlerFunc {
 		var bmi models.BMI
 
 		defer cancel()
-		// if auth.ValidateUserTokenInHeader(c.Request) == false {
-		// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-		// 	return
+		if auth.ValidateUserTokenInHeader(c.Request) == false {
+			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+			return
 
-		// }
+		}
 
 		if err := c.BindJSON(&bmi); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": err.Error()})

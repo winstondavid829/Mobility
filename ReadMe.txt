@@ -1,21 +1,25 @@
-/////////////////////////////// Production Start -  35.228.150.245 ////////////////////////////////////////////////////////////////////
-gcloud endpoints services deploy openapi-entertainment.yaml
-sudo docker network create --driver bridge esp_net_entertain
-docker build . -t go-dock-entertain-production:latest
-docker tag go-dock-entertain-production:latest gcr.io/iconic-ruler-363702/go-dock-entertain-production:latest
-docker push gcr.io/iconic-ruler-363702/go-dock-entertain-production:latest
-sudo docker pull gcr.io/iconic-ruler-363702/go-dock-entertain-production:latest
+////////////////////////////////////////////// Development - 35.228.251.106 /////////////////////////////////////////////////////////
+gcloud endpoints services deploy openapi-entitlementregistry-dev.yaml
+sudo docker network create --driver bridge esp_net_entertainment
+docker build . -t go-dock-entertainment-dev:latest
+docker tag go-dock-entertainment-dev:latest gcr.io/iconic-ruler-363702/go-dock-entertainment-dev:latest
+docker push gcr.io/iconic-ruler-363702/go-dock-entertainment-dev:latest
+sudo docker pull gcr.io/iconic-ruler-363702/go-dock-entertainment-dev:latest
+sudo docker run --detach --restart always --name=esp-entertainment --net=esp_net_entertainment gcr.io/iconic-ruler-363702/go-dock-entertainment-dev:latest
 
-sudo docker run --detach --restart always --name=esp-entertain --net=esp_net_entertain --log-opt max-size=10m --log-opt max-file=5 gcr.io/iconic-ruler-363702/go-dock-entertain-production:latest
-sudo docker run --name=espssl-5007-entertain \
+
+ #Creating Server Blocks in nginx
+ For this user script 'create_gcpendpoint.sh' under /automate_nginx folder, the command line parameter is cloud end point url
+sudo docker run --name=espssl-5011-entertainment \
      --detach \
-     --publish=5007:443 \
-     --net=esp_net_entertain \
-     -v /etc/letsencrypt/live/entertain.endpoints.iconic-ruler-363702.cloud.goog/fullchain.pem:/etc/nginx/ssl/nginx.crt \
-     -v /etc/letsencrypt/live/entertain.endpoints.iconic-ruler-363702.cloud.goog/privkey.pem:/etc/nginx/ssl/nginx.key \
-     --link=esp-entertain:esp-entertain \
+     --publish=5011:443 \
+     --net=esp_net_entertainment \
+     -v /etc/letsencrypt/live/entertainment-dev.endpoints.iconic-ruler-363702.cloud.goog/fullchain.pem:/etc/nginx/ssl/nginx.crt \
+     -v /etc/letsencrypt/live/entertainment-dev.endpoints.iconic-ruler-363702.cloud.goog/privkey.pem:/etc/nginx/ssl/nginx.key \
+     --link=esp-entertainment:esp-entertainment \
      gcr.io/endpoints-release/endpoints-runtime:1 \
-     --service=entertain.endpoints.iconic-ruler-363702.cloud.goog \
+     --service=entertainment-dev.endpoints.iconic-ruler-363702.cloud.goog \
      --rollout_strategy=managed \
-     --backend=esp-entertain:8080 \
+     --backend=esp-entertainment:8080 \
      --ssl_port=443
+======================================================================================================================================================

@@ -45,7 +45,7 @@ func CreateRSA256Token(audience, issuer, privatekey string) (string, error) {
 	atClaims := jwt.MapClaims{}
 	atClaims["iss"] = issuer
 	atClaims["aud"] = audience
-	atClaims["exp"] = time.Now().Add(time.Hour * 24 * 7).Unix()
+	atClaims["exp"] = time.Now().Add(time.Hour * 24 * 60).Unix()
 	at := jwt.NewWithClaims(jwt.SigningMethodRS256, atClaims)
 	token, err := at.SignedString(key)
 	if err != nil {

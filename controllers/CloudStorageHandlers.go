@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"entertainment/auth"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,11 +26,11 @@ func HandleFileUploadToBucket(c *gin.Context) {
 
 	ctx := appengine.NewContext(c.Request)
 
-	// if auth.ValidateUserTokenInHeader(c.Request) == false {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
-	// 	return
+	if auth.ValidateUserTokenInHeader(c.Request) == false {
+		c.JSON(http.StatusBadRequest, gin.H{"Status": false, "Result": fmt.Sprintf("%v", "Unauthorized Login Attempt / Token Expired")})
+		return
 
-	// }
+	}
 
 	storageClient, err = storage.NewClient(ctx, option.WithCredentialsFile("bucket-access.json"))
 	if err != nil {
